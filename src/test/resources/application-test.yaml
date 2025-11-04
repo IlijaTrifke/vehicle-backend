@@ -1,0 +1,7 @@
+logging:
+  level:
+    root: WARN
+    org.springframework: WARN
+    org.hibernate: WARN
+    com.meuhlbauer.vehicle_backend: INFO
+
