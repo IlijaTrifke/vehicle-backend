@@ -15,7 +15,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .headers(h -> h.frameOptions(f -> f.sameOrigin())) // za H2 console
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/h2-console/**", "/api/**").permitAll()
+                        .requestMatchers("/h2-console/**", "/api/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().permitAll());
         return http.build();
     }
