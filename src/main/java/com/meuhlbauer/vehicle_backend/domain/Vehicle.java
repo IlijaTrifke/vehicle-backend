@@ -1,5 +1,6 @@
 package com.meuhlbauer.vehicle_backend.domain;
 
+import com.meuhlbauer.vehicle_backend.enums.Fuel;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -21,11 +22,10 @@ public class Vehicle {
   @Column(nullable = false, length = 40)
   private String model;
 
-  @NotNull
-  @Min(1886)
-  @Max(9999)
-  @Column(nullable = false)
-  private Integer firstRegistrationYear;
+  @NotBlank
+  @Pattern(regexp = "\\d{4}", message = "Year must have 4 digits")
+  @Column(nullable = false, length = 4)
+  private String firstRegistrationYear;
 
   @NotNull
   @Min(1)
@@ -33,10 +33,10 @@ public class Vehicle {
   @Column(nullable = false)
   private Integer cubicCapacity;
 
-  @NotBlank
-  @Pattern(regexp = "Diesel|Petrol|Hybrid")
-  @Column(nullable = false, length = 10)
-  private String fuel;
+  @NotNull
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private Fuel fuel;
 
   @NotNull
   @Min(0)

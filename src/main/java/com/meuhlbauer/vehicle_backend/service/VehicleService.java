@@ -6,6 +6,7 @@ import com.meuhlbauer.vehicle_backend.repository.VehicleJpaRepository;
 import com.meuhlbauer.vehicle_backend.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,24 +15,56 @@ import java.util.List;
 public class VehicleService {
     private final VehicleJpaRepository repo;
 
+    /**
+     * Retrieves all vehicles from the database.
+     *
+     * @return list of all vehicles
+     */
+    @Transactional(readOnly = true)
     public List<Vehicle> list() {
         return repo.findAll();
     }
 
+    /**
+     * Finds a vehicle by its ID.
+     *
+     * @param id the vehicle ID
+     * @return the vehicle with the given ID
+     * @throws NotFoundException if vehicle with given ID does not exist
+     */
+    @Transactional(readOnly = true)
+    public Vehicle findById(Long id) {
+        return repo.findById(id)
+                .orElseThrow(() -> new NotFoundException("Vehicle %d not found".formatted(id)));
+    }
+
+    /**
+     * Creates a new vehicle.
+     *
+     * @param req the vehicle request data
+     * @return the created vehicle
+     */
+    @Transactional
     public Vehicle create(VehicleRequest req) {
-        var v = Vehicle.builder()
+        Vehicle vehicle = Vehicle.builder()
                 .model(req.model())
                 .firstRegistrationYear(req.firstRegistrationYear())
                 .cubicCapacity(req.cubicCapacity())
                 .fuel(req.fuel())
                 .mileage(req.mileage())
                 .build();
-        return repo.save(v);
+        return repo.save(vehicle);
     }
 
+    /**
+     * Deletes a vehicle by its ID.
+     *
+     * @param id the vehicle ID
+     * @throws NotFoundException if vehicle with given ID does not exist
+     */
+    @Transactional
     public void delete(Long id) {
-        if (!repo.existsById(id))
-            throw new NotFoundException("Vehicle %d not found".formatted(id));
-        repo.deleteById(id);
+        Vehicle vehicle = findById(id);
+        repo.delete(vehicle);
     }
 }
