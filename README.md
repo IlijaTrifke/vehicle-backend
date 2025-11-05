@@ -88,9 +88,9 @@ Although not required by the specification, several improvements were added for 
 - **Integration tests (MockMvc)** and context load test  
 - **Simplified security configuration** (CSRF disabled, permit-all)  
 - **CORS configuration** for frontend integration  
-- **RFC 7807 Problem Details** standardizovan error format sa `traceId` i stabilnim `code`
+- **RFC 7807 Problem Details** standardized error format with `traceId` and stable `code`
 
-Note (validation UX): DTO koristi tip Long za numerička polja (`cubicCapacity`, `mileage`) kako bi i ekstremno velike vrednosti prošle JSON parsiranje i zatim vratile precizne Bean Validation poruke (npr. "must be less than or equal to ...") umesto generičnog "Malformed JSON or invalid types".
+Note (validation UX): The DTO uses Long type for numeric fields (`cubicCapacity`, `mileage`) so that even extremely large values pass JSON parsing and then return precise Bean Validation messages (e.g., "must be less than or equal to ...") umesto generičnog "Malformed JSON or invalid types".
 
 ---
 
@@ -142,19 +142,19 @@ curl -X DELETE http://localhost:8080/api/vehicles/1
 
 ---
 
-## ❗ Standardizovani error format (RFC 7807)
+## ❗ Standardized error format (RFC 7807)
 
-Svi error odgovori koriste RFC 7807 `application/problem+json` sa stabilnim poljima:
+All error responses use RFC 7807 `application/problem+json` format with stable fields:
 
 - `status` (HTTP status)
-- `title` (razlog statusa)
-- `detail` (kratak opis, bez internih detalja)
-- `instance` (URI rute)
-- `code` (stabilan aplikativni kod, enum)
-- `traceId` (za korelaciju u logovima)
-- `errors` (mapa specifičnih grešaka za validacije)
+- `title` (status reason)
+- `detail` (brief description, without internal details)
+- `instance` (route URI)
+- `code` (stable application-specific code, enum)
+- `traceId` (for correlation in logs)
+- `errors` (map of specific validation errors)
 
-Primer 404:
+Example 404:
 
 ```json
 {
@@ -170,7 +170,7 @@ Primer 404:
 }
 ```
 
-Primer 400 (validacija body-ja):
+Example 400 (body validation):
 
 ```json
 {
@@ -188,7 +188,7 @@ Primer 400 (validacija body-ja):
 }
 ```
 
-#### Primer 400 (numeric range validation)
+#### Example 400 (numeric range validation)
 
 ```json
 {
@@ -205,9 +205,9 @@ Primer 400 (validacija body-ja):
 }
 ```
 
-### Error codes (stabilni)
+### Error codes (stable)
 
-Generički kodovi (enum): `BAD_REQUEST`, `VALIDATION_ERROR`, `TYPE_MISMATCH`, `NOT_FOUND`, `CONFLICT`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+Generic codes (enum): `BAD_REQUEST`, `VALIDATION_ERROR`, `TYPE_MISMATCH`, `NOT_FOUND`, `CONFLICT`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
 
 ---
 
