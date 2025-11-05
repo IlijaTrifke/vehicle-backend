@@ -1,9 +1,5 @@
 package com.meuhlbauer.vehicle_backend.exception;
 
-import java.net.URI;
-import java.util.*;
-import java.util.stream.Collectors;
-
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -15,6 +11,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -23,7 +20,12 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import org.springframework.lang.NonNull;
+
+import java.net.URI;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -56,9 +58,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // 400 - JSON parse / type mismatch
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(@NonNull HttpMessageNotReadableException ex,
-            @NonNull org.springframework.http.HttpHeaders headers,
-            @NonNull HttpStatusCode status,
-            @NonNull org.springframework.web.context.request.WebRequest request) {
+                                                                  @NonNull org.springframework.http.HttpHeaders headers,
+                                                                  @NonNull HttpStatusCode status,
+                                                                  @NonNull org.springframework.web.context.request.WebRequest request) {
         ProblemDetail pd = baseProblem(HttpStatus.BAD_REQUEST, "Malformed JSON or invalid types", request);
         pd.setProperty("code", ErrorCode.BAD_REQUEST.name());
         log.warn("400 Bad Request (not readable) traceId={}", currentTraceId());
@@ -88,7 +90,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // 400 - @Validated on params/path/query (method-level) - Jakarta validation
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ProblemDetail> handleConstraintViolations(ConstraintViolationException ex,
-            WebRequest request) {
+                                                                    WebRequest request) {
         Map<String, String> errors = new LinkedHashMap<>();
         for (ConstraintViolation<?> v : ex.getConstraintViolations()) {
             errors.put(v.getPropertyPath().toString(), v.getMessage());
@@ -152,7 +154,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // 400 - Pogrešan tip parametra / path varijable
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ProblemDetail> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
-            WebRequest request) {
+                                                            WebRequest request) {
         ProblemDetail pd = baseProblem(HttpStatus.BAD_REQUEST, "Invalid parameter type", request);
         pd.setProperty("code", ErrorCode.TYPE_MISMATCH.name());
         String expected = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown";

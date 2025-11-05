@@ -21,8 +21,8 @@ springdoc:
 
 logging:
   level:
-    root: INFO                
-    org.springframework: WARN 
-    org.hibernate: WARN       
+    root: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
     com.meuhlbauer.vehicle_backend: INFO 
 

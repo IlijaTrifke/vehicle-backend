@@ -2,8 +2,8 @@ package com.meuhlbauer.vehicle_backend.service;
 
 import com.meuhlbauer.vehicle_backend.domain.Vehicle;
 import com.meuhlbauer.vehicle_backend.dto.VehicleRequest;
-import com.meuhlbauer.vehicle_backend.repository.VehicleJpaRepository;
 import com.meuhlbauer.vehicle_backend.exception.NotFoundException;
+import com.meuhlbauer.vehicle_backend.repository.VehicleJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
