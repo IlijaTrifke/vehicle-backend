@@ -62,6 +62,15 @@ Implemented using **Jakarta Bean Validation**:
 - `@NotNull`, `@Min`, `@Max`, `@Positive` for numbers  
 - Enum validation for `Fuel` (`diesel`, `petrol`, `hybrid`)
 
+#### Validation overview
+| Field | Type | Constraints |
+|------|------|-------------|
+| model | String | Not blank, max length 40 |
+| firstRegistrationYear | String | Exactly 4 digits (`\\d{4}`) |
+| cubicCapacity | Long | Min 1, Max 9999 |
+| fuel | Enum | One of: `diesel`, `petrol`, `hybrid` |
+| mileage | Long | Min 0, Max 9,999,999 |
+
 ### Error Handling
 - `NotFoundException` for missing IDs  
 - Centralized exception handler returning consistent JSON responses  
@@ -79,6 +88,9 @@ Although not required by the specification, several improvements were added for 
 - **Integration tests (MockMvc)** and context load test  
 - **Simplified security configuration** (CSRF disabled, permit-all)  
 - **CORS configuration** for frontend integration  
+- **RFC 7807 Problem Details** standardizovan error format sa `traceId` i stabilnim `code`
+
+Note (validation UX): DTO koristi tip Long za numerička polja (`cubicCapacity`, `mileage`) kako bi i ekstremno velike vrednosti prošle JSON parsiranje i zatim vratile precizne Bean Validation poruke (npr. "must be less than or equal to ...") umesto generičnog "Malformed JSON or invalid types".
 
 ---
 
@@ -91,6 +103,11 @@ Although not required by the specification, several improvements were added for 
 ### Start the Application
 ```bash
 ./mvnw spring-boot:run
+```
+
+On Windows (PowerShell/CMD):
+```bash
+mvnw.cmd spring-boot:run
 ```
 
 Then open:  
@@ -122,6 +139,75 @@ curl -X GET http://localhost:8080/api/vehicles
 ```bash
 curl -X DELETE http://localhost:8080/api/vehicles/1
 ```
+
+---
+
+## ❗ Standardizovani error format (RFC 7807)
+
+Svi error odgovori koriste RFC 7807 `application/problem+json` sa stabilnim poljima:
+
+- `status` (HTTP status)
+- `title` (razlog statusa)
+- `detail` (kratak opis, bez internih detalja)
+- `instance` (URI rute)
+- `code` (stabilan aplikativni kod, enum)
+- `traceId` (za korelaciju u logovima)
+- `errors` (mapa specifičnih grešaka za validacije)
+
+Primer 404:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Resource not found",
+  "instance": "/api/vehicles/123",
+  "code": "NOT_FOUND",
+  "resource": "vehicle",
+  "resourceId": "123",
+  "traceId": "e7f2b6f8-2a3e-4b0b-9a4c-2d8e9d1c5a11"
+}
+```
+
+Primer 400 (validacija body-ja):
+
+```json
+{
+  "type": "about:blank",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "Validation failed",
+  "instance": "/api/vehicles",
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "model": "must not be blank",
+    "mileage": "must be greater than or equal to 0"
+  },
+  "traceId": "c1a9c7b1-7b7f-4b3a-9a3e-f9a1b2c3d4e5"
+}
+```
+
+#### Primer 400 (numeric range validation)
+
+```json
+{
+  "type": "https://api.example.com/problems/400",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "Validation failed",
+  "instance": "/api/vehicles",
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "cubicCapacity": "must be less than or equal to 9999"
+  },
+  "traceId": "..."
+}
+```
+
+### Error codes (stabilni)
+
+Generički kodovi (enum): `BAD_REQUEST`, `VALIDATION_ERROR`, `TYPE_MISMATCH`, `NOT_FOUND`, `CONFLICT`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
 
 ---
 

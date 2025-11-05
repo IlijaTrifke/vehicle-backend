@@ -35,7 +35,8 @@ public class VehicleService {
     @Transactional(readOnly = true)
     public Vehicle findById(Long id) {
         return repo.findById(id)
-                .orElseThrow(() -> new NotFoundException("Vehicle %d not found".formatted(id)));
+                .orElseThrow(() -> new NotFoundException("vehicle", String.valueOf(id),
+                        "Vehicle %d not found".formatted(id)));
     }
 
     /**
@@ -49,9 +50,9 @@ public class VehicleService {
         Vehicle vehicle = Vehicle.builder()
                 .model(req.model())
                 .firstRegistrationYear(req.firstRegistrationYear())
-                .cubicCapacity(req.cubicCapacity())
+                .cubicCapacity(req.cubicCapacity().intValue())
                 .fuel(req.fuel())
-                .mileage(req.mileage())
+                .mileage(req.mileage().intValue())
                 .build();
         return repo.save(vehicle);
     }
