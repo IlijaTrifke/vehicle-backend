@@ -42,6 +42,17 @@ public class VehicleController {
                 .body(VehicleResponse.from(created));
     }
 
+    @Operation(summary = "Update a vehicle", description = "Updates an existing vehicle by its ID with the provided " +
+            "data")
+    @ApiResponse(responseCode = "200", description = "Vehicle successfully updated")
+    @ApiResponse(responseCode = "400", ref = "#/components/responses/ValidationErrorProblem")
+    @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+    @PutMapping("/{id}")
+    public ResponseEntity<VehicleResponse> update(@PathVariable Long id, @Valid @RequestBody VehicleRequest req) {
+        var updated = vehicleService.update(id, req);
+        return ResponseEntity.ok(VehicleResponse.from(updated));
+    }
+
     @Operation(summary = "Delete a vehicle", description = "Deletes a vehicle by its ID")
     @ApiResponse(responseCode = "204", description = "Vehicle successfully deleted")
     @ApiResponse(responseCode = "400", ref = "#/components/responses/TypeMismatchProblem")

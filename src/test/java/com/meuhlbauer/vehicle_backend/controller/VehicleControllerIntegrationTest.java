@@ -164,6 +164,132 @@ class VehicleControllerIntegrationTest {
     }
 
     @Test
+    void testUpdateVehicle() throws Exception {
+        // First create a vehicle
+        VehicleRequest createRequest = new VehicleRequest(
+                "BMW 320",
+                "2021",
+                2000L,
+                Fuel.PETROL,
+                50000L);
+
+        String createRequestJson = objectMapper.writeValueAsString(createRequest);
+
+        String createResponse = mockMvc.perform(post("/api/vehicles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createRequestJson))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        VehicleResponse created = objectMapper.readValue(createResponse, VehicleResponse.class);
+        Long vehicleId = created.id();
+
+        // Test successful update
+        VehicleRequest updateRequest = new VehicleRequest(
+                "BMW 330",
+                "2022",
+                3000L,
+                Fuel.HYBRID,
+                75000L);
+
+        String updateRequestJson = objectMapper.writeValueAsString(updateRequest);
+
+        mockMvc.perform(put("/api/vehicles/{id}", vehicleId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateRequestJson))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(vehicleId))
+                .andExpect(jsonPath("$.model").value("BMW 330"))
+                .andExpect(jsonPath("$.firstRegistrationYear").value("2022"))
+                .andExpect(jsonPath("$.cubicCapacity").value(3000))
+                .andExpect(jsonPath("$.fuel").value("hybrid"))
+                .andExpect(jsonPath("$.mileage").value(75000));
+
+        // Verify that vehicle is updated in database
+        assertThat(vehicleRepository.count()).isEqualTo(1);
+        var updatedVehicle = vehicleRepository.findById(vehicleId);
+        assertThat(updatedVehicle).isPresent();
+        assertThat(updatedVehicle.get().getModel()).isEqualTo("BMW 330");
+        assertThat(updatedVehicle.get().getFirstRegistrationYear()).isEqualTo("2022");
+        assertThat(updatedVehicle.get().getCubicCapacity()).isEqualTo(3000);
+        assertThat(updatedVehicle.get().getFuel()).isEqualTo(Fuel.HYBRID);
+        assertThat(updatedVehicle.get().getMileage()).isEqualTo(75000);
+
+        // Test update of non-existent vehicle (404)
+        mockMvc.perform(put("/api/vehicles/{id}", 999L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateRequestJson))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.type").exists())
+                .andExpect(jsonPath("$.title").value("Not Found"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").exists())
+                .andExpect(jsonPath("$.instance").value("/api/vehicles/999"))
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.resource").value("vehicle"))
+                .andExpect(jsonPath("$.resourceId").value("999"))
+                .andExpect(jsonPath("$.traceId").exists());
+    }
+
+    @Test
+    void testUpdateVehicleWithInvalidData() throws Exception {
+        // First create a vehicle
+        VehicleRequest createRequest = new VehicleRequest(
+                "Audi A4",
+                "2020",
+                2000L,
+                Fuel.DIESEL,
+                120000L);
+
+        String createRequestJson = objectMapper.writeValueAsString(createRequest);
+
+        String createResponse = mockMvc.perform(post("/api/vehicles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createRequestJson))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        VehicleResponse created = objectMapper.readValue(createResponse, VehicleResponse.class);
+        Long vehicleId = created.id();
+
+        // Test PUT /api/vehicles/{id} with invalid data - Bean Validation check
+        VehicleRequest invalidRequest = new VehicleRequest(
+                "", // empty model - @NotBlank
+                "20", // invalid year format - @Pattern regexp="\\d{4}"
+                0L, // invalid cubic capacity - @Min(1)
+                null, // null fuel - @NotNull
+                -1L // invalid mileage - @Min(0)
+        );
+
+        String requestJson = objectMapper.writeValueAsString(invalidRequest);
+
+        mockMvc.perform(put("/api/vehicles/{id}", vehicleId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.type").exists())
+                .andExpect(jsonPath("$.title").value("Bad Request"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.instance").value("/api/vehicles/" + vehicleId))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.traceId").exists())
+                .andExpect(jsonPath("$.errors").exists())
+                .andExpect(jsonPath("$.errors.model").exists())
+                .andExpect(jsonPath("$.errors.firstRegistrationYear").exists())
+                .andExpect(jsonPath("$.errors.cubicCapacity").exists())
+                .andExpect(jsonPath("$.errors.fuel").exists())
+                .andExpect(jsonPath("$.errors.mileage").exists());
+    }
+
+    @Test
     void testDeleteVehicleWithInvalidType() throws Exception {
         // Test DELETE /api/vehicles/{id} with invalid type (string instead of Long)
         mockMvc.perform(delete("/api/vehicles/abc"))

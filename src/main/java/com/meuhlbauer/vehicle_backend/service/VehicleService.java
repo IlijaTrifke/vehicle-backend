@@ -58,6 +58,25 @@ public class VehicleService {
     }
 
     /**
+     * Updates an existing vehicle by its ID.
+     *
+     * @param id  the vehicle ID
+     * @param req the vehicle request data with updated values
+     * @return the updated vehicle
+     * @throws NotFoundException if vehicle with given ID does not exist
+     */
+    @Transactional
+    public Vehicle update(Long id, VehicleRequest req) {
+        Vehicle vehicle = findById(id);
+        vehicle.setModel(req.model());
+        vehicle.setFirstRegistrationYear(req.firstRegistrationYear());
+        vehicle.setCubicCapacity(req.cubicCapacity().intValue());
+        vehicle.setFuel(req.fuel());
+        vehicle.setMileage(req.mileage().intValue());
+        return repo.save(vehicle);
+    }
+
+    /**
      * Deletes a vehicle by its ID.
      *
      * @param id the vehicle ID

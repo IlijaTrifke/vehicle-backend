@@ -1,13 +1,13 @@
 # 🚗 Vehicle Backend
 
 A **Spring Boot** application developed as part of the Mühlbauer technical assignment.  
-The project implements the required **Create, Read, and Delete (CRD)** functionality for managing vehicle records, following a clean, modular architecture and good development practices.
+The project implements **Create, Read, Update, and Delete (CRUD)** functionality for managing vehicle records, following a clean, modular architecture and good development practices.
 
 ---
 
 ## 🎯 Purpose
 
-The application enables basic management of vehicle data — creating, listing, and deleting vehicles with attributes such as model, first registration year, cubic capacity, fuel type, and mileage.
+The application enables basic management of vehicle data — creating, listing, updating, and deleting vehicles with attributes such as model, first registration year, cubic capacity, fuel type, and mileage.
 
 This backend corresponds to the server-side requirements defined in the task specification document.
 
@@ -32,7 +32,7 @@ This backend corresponds to the server-side requirements defined in the task spe
 
 ```
 com.muehlbauer.vehicle_backend
-├── controller      → REST endpoints (CRD operations)
+├── controller      → REST endpoints (CRUD operations)
 ├── service         → Business logic
 ├── domain          → JPA entities
 ├── dto             → Request/response models
@@ -54,6 +54,7 @@ The application follows a layered design ensuring separation of concerns and tes
 |--------|-----------|-------------|
 | **GET** | `/api/vehicles` | Retrieve all vehicles |
 | **POST** | `/api/vehicles` | Create a new vehicle |
+| **PUT** | `/api/vehicles/{id}` | Update a vehicle by ID |
 | **DELETE** | `/api/vehicles/{id}` | Delete a vehicle by ID |
 
 ### Data Validation
@@ -133,6 +134,17 @@ curl -X POST http://localhost:8080/api/vehicles   -H "Content-Type: application/
 ### Get All Vehicles
 ```bash
 curl -X GET http://localhost:8080/api/vehicles
+```
+
+### Update Vehicle
+```bash
+curl -X PUT http://localhost:8080/api/vehicles/1   -H "Content-Type: application/json"   -d '{
+    "model": "BMW 330",
+    "firstRegistrationYear": "2022",
+    "cubicCapacity": 3000,
+    "fuel": "hybrid",
+    "mileage": 75000
+  }'
 ```
 
 ### Delete Vehicle
@@ -229,7 +241,8 @@ All tests run against the H2 in-memory database.
 ## 📄 Notes
 
 - The application scope strictly follows the **Create, Read, and Delete** requirements defined in the specification.
-- Features such as authentication, update operations, or persistent storage were **excluded by design** to align with the project scope.
+- **Update operation** was added as an additional feature beyond the original requirements.
+- Features such as authentication or persistent storage were **excluded by design** to align with the project scope.
 - Some additional improvements were made for code quality and developer experience.
 
 ---
