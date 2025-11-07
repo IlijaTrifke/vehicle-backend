@@ -14,6 +14,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -116,6 +118,204 @@ class VehicleControllerIntegrationTest {
                 .andExpect(jsonPath("$.content[0].model").value("Model 9"))
                 .andExpect(jsonPath("$.content[1].model").value("Model 8"))
                 .andExpect(jsonPath("$.content[2].model").value("Model 7"));
+    }
+
+    @Test
+    void testGetAllVehiclesPagedWithFilters() throws Exception {
+        // Create test vehicles with specific attributes for filtering
+        VehicleRequest vehicle1 = new VehicleRequest("Audi A4", "2020", 2000L, Fuel.DIESEL, 100000L);
+        VehicleRequest vehicle2 = new VehicleRequest("BMW 320", "2020", 1800L, Fuel.PETROL, 80000L);
+        VehicleRequest vehicle3 = new VehicleRequest("Audi A6", "2021", 3000L, Fuel.DIESEL, 50000L);
+        VehicleRequest vehicle4 = new VehicleRequest("Mercedes C-Class", "2021", 2200L, Fuel.HYBRID, 30000L);
+        VehicleRequest vehicle5 = new VehicleRequest("VW Golf", "2022", 1600L, Fuel.PETROL, 20000L);
+
+        for (VehicleRequest req : List.of(vehicle1, vehicle2, vehicle3, vehicle4, vehicle5)) {
+            String requestJson = objectMapper.writeValueAsString(req);
+            mockMvc.perform(post("/api/vehicles")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestJson))
+                    .andExpect(status().isCreated());
+        }
+
+        // Test filter by firstRegistrationYear
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2020"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].firstRegistrationYear").value(
+                        org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("2020"))));
+
+        // Test filter by fuel type (DIESEL)
+        mockMvc.perform(get("/api/vehicles/paged?fuel=diesel"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].fuel").value(
+                        org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("diesel"))));
+
+        // Test filter by fuel type (PETROL)
+        mockMvc.perform(get("/api/vehicles/paged?fuel=petrol"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].fuel").value(
+                        org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("petrol"))));
+
+        // Test filter by fuel type (HYBRID)
+        mockMvc.perform(get("/api/vehicles/paged?fuel=hybrid"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].fuel").value("hybrid"))
+                .andExpect(jsonPath("$.content[0].model").value("Mercedes C-Class"));
+
+        // Test filter by modelSearch (case-insensitive partial match)
+        mockMvc.perform(get("/api/vehicles/paged?modelSearch=audi"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2));
+
+        // Test filter by modelSearch with partial match
+        mockMvc.perform(get("/api/vehicles/paged?modelSearch=a"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(3)) // Audi A4, Audi A6, Mercedes
+                // C-Class
+                .andExpect(jsonPath("$.totalElements").value(3));
+
+        // Test combination of filters: year=2021 AND fuel=diesel
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2021&fuel=diesel"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].model").value("Audi A6"))
+                .andExpect(jsonPath("$.content[0].firstRegistrationYear").value("2021"))
+                .andExpect(jsonPath("$.content[0].fuel").value("diesel"));
+
+        // Test combination of filters: modelSearch=audi AND fuel=diesel
+        mockMvc.perform(get("/api/vehicles/paged?modelSearch=audi&fuel=diesel"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2));
+
+        // Test combination of all filters
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2020&fuel=diesel&modelSearch=audi"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].model").value("Audi A4"))
+                .andExpect(jsonPath("$.content[0].firstRegistrationYear").value("2020"))
+                .andExpect(jsonPath("$.content[0].fuel").value("diesel"));
+
+        // Test filter with no matches
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2019"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(0))
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        // Test range format for firstRegistrationYear (2020-2021)
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2020-2021"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(4))
+                .andExpect(jsonPath("$.totalElements").value(4))
+                .andExpect(jsonPath("$.content[*].firstRegistrationYear").value(
+                        org.hamcrest.Matchers.everyItem(
+                                org.hamcrest.Matchers.anyOf(
+                                        org.hamcrest.Matchers.is("2020"),
+                                        org.hamcrest.Matchers.is("2021")))));
+
+        // Test range format for firstRegistrationYear (2020-2022) - should include all
+        // vehicles
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2020-2022"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(5))
+                .andExpect(jsonPath("$.totalElements").value(5));
+
+        // Test range format with combination of filters: year range 2020-2021 AND
+        // fuel=diesel
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2020-2021&fuel=diesel"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].fuel").value(
+                        org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("diesel"))));
+
+        // Test invalid range format (empty start year) - should be ignored
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=-2021"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").value(5)); // All vehicles returned
+
+        // Test invalid range format (empty end year) - should be ignored
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2020-"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").value(5)); // All vehicles returned
+
+        // Test invalid range format (non-numeric) - should be ignored
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=abc-def"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").value(5)); // All vehicles returned
+
+        // Test range format with same start and end year (e.g., 2020-2020) - should be
+        // treated as exact year
+        mockMvc.perform(get("/api/vehicles/paged?firstRegistrationYear=2020-2020"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].firstRegistrationYear").value(
+                        org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("2020"))));
+
+        // Test filters with pagination and sorting
+        mockMvc.perform(get("/api/vehicles/paged?fuel=diesel&page=0&size=1&sort=model,asc"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.content[0].model").value("Audi A4"));
+
+        // Test invalid fuel type (should return 400 Bad Request)
+        mockMvc.perform(get("/api/vehicles/paged?fuel=electric"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.title").value("Bad Request"))
+                .andExpect(jsonPath("$.detail").exists())
+                .andExpect(jsonPath("$.code").value("INVALID_ENUM"))
+                .andExpect(jsonPath("$.traceId").exists());
     }
 
     @Test

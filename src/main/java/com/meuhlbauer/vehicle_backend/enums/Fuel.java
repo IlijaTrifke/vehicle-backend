@@ -10,7 +10,12 @@ public enum Fuel {
 
     @JsonCreator
     public static Fuel from(String val) {
-        return Fuel.valueOf(val.trim().toUpperCase());
+        try {
+            return Fuel.valueOf(val.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Invalid fuel type: '" + val + "'. Allowed values are: diesel, petrol, hybrid");
+        }
     }
 
     @JsonValue

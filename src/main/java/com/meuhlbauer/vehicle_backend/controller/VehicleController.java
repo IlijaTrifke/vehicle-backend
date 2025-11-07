@@ -3,8 +3,10 @@ package com.meuhlbauer.vehicle_backend.controller;
 import com.meuhlbauer.vehicle_backend.domain.Vehicle;
 import com.meuhlbauer.vehicle_backend.dto.VehicleRequest;
 import com.meuhlbauer.vehicle_backend.dto.VehicleResponse;
+import com.meuhlbauer.vehicle_backend.enums.Fuel;
 import com.meuhlbauer.vehicle_backend.service.VehicleService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,11 +39,25 @@ public class VehicleController {
     }
 
     @Operation(summary = "Get all vehicles (paginated)", description = "Retrieves a paginated list of vehicles. " +
-            "Supports query parameters: page (default: 0), size (default: 20), sort (e.g., sort=model,asc)")
+            "Supports query parameters: page (default: 0), size (default: 20), sort (e.g., sort=model,asc). " +
+            "Optional filters: firstRegistrationYear (exact year or range format: YYYY-YYYY, e.g., 2000-2024), fuel " +
+            "(diesel/petrol/hybrid), modelSearch (partial match)")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved paginated list of vehicles")
     @GetMapping("/paged")
-    public ResponseEntity<Page<VehicleResponse>> getAllPaged(@PageableDefault(size = 20) Pageable pageable) {
-        Page<VehicleResponse> page = vehicleService.findAll(pageable)
+    public ResponseEntity<Page<VehicleResponse>> getAllPaged(
+            @Parameter(description = "Filter by first registration year (exact year, e.g., 2020, or range format, e.g" +
+                    "., 2000-2024)") @RequestParam(required = false) String firstRegistrationYear,
+            @Parameter(description = "Filter by fuel type (diesel, petrol, or hybrid)") @RequestParam(required =
+                    false) String fuel,
+            @Parameter(description = "Search by model name (case-insensitive partial match)") @RequestParam(required
+                    = false) String modelSearch,
+            @PageableDefault(size = 20) Pageable pageable) {
+        Fuel fuelEnum = null;
+        if (fuel != null && !fuel.isBlank()) {
+            fuelEnum = Fuel.from(fuel);
+        }
+        Page<VehicleResponse> page = vehicleService
+                .findAllWithFilters(firstRegistrationYear, fuelEnum, modelSearch, pageable)
                 .map(VehicleResponse::from);
         return ResponseEntity.ok(page);
     }

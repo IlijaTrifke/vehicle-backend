@@ -163,4 +163,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.warn("400 Type mismatch traceId={}", currentTraceId());
         return ResponseEntity.badRequest().body(pd);
     }
+
+    // 400 - Invalid enum value
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
+        ProblemDetail pd = baseProblem(HttpStatus.BAD_REQUEST,
+                ex.getMessage() != null ? ex.getMessage() : "Invalid parameter value", request);
+        pd.setProperty("code", ErrorCode.INVALID_ENUM.name());
+        pd.setType(URI.create("https://api.example.com/problems/invalid-enum"));
+        log.warn("400 Invalid enum value traceId={}", currentTraceId());
+        return ResponseEntity.badRequest().body(pd);
+    }
 }

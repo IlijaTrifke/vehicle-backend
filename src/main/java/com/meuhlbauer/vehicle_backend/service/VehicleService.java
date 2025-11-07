@@ -8,6 +8,7 @@ import com.meuhlbauer.vehicle_backend.repository.VehicleJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,61 @@ public class VehicleService {
     @Transactional(readOnly = true)
     public Page<Vehicle> findAll(Pageable pageable) {
         return repo.findAll(pageable);
+    }
+
+    /**
+     * Retrieves paginated vehicles from the database with optional filters.
+     *
+     * @param firstRegistrationYear optional filter for first registration year
+     *                              (exact year or range format: "YYYY-YYYY")
+     * @param fuel                  optional filter for fuel type
+     * @param modelSearch           optional search term for model (case-insensitive
+     *                              partial match)
+     * @param pageable              pagination information (page, size, sort)
+     * @return page of vehicles matching the filters
+     */
+    @Transactional(readOnly = true)
+    public Page<Vehicle> findAllWithFilters(String firstRegistrationYear, Fuel fuel, String modelSearch,
+                                            Pageable pageable) {
+        Specification<Vehicle> spec = Specification.where(null);
+
+        if (firstRegistrationYear != null && !firstRegistrationYear.isBlank()) {
+            if (firstRegistrationYear.contains("-")) {
+                // Range format: "YYYY-YYYY"
+                String[] parts = firstRegistrationYear.split("-", 2);
+                if (parts.length == 2) {
+                    String startYear = parts[0].trim();
+                    String endYear = parts[1].trim();
+
+                    if (!startYear.isEmpty() && !endYear.isEmpty()
+                            && startYear.matches("\\d{4}") && endYear.matches("\\d{4}")) {
+                        // If start and end year are the same, treat as exact year
+                        if (startYear.equals(endYear)) {
+                            spec = spec
+                                    .and((root, query, cb) -> cb.equal(root.get("firstRegistrationYear"), startYear));
+                        } else {
+                            spec = spec.and((root, query, cb) -> cb.and(
+                                    cb.greaterThanOrEqualTo(root.get("firstRegistrationYear"), startYear),
+                                    cb.lessThanOrEqualTo(root.get("firstRegistrationYear"), endYear)));
+                        }
+                    }
+                }
+            } else {
+                spec = spec
+                        .and((root, query, cb) -> cb.equal(root.get("firstRegistrationYear"), firstRegistrationYear));
+            }
+        }
+
+        if (fuel != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("fuel"), fuel));
+        }
+
+        if (modelSearch != null && !modelSearch.isBlank()) {
+            spec = spec.and(
+                    (root, query, cb) -> cb.like(cb.lower(root.get("model")), "%" + modelSearch.toLowerCase() + "%"));
+        }
+
+        return repo.findAll(spec, pageable);
     }
 
     /**

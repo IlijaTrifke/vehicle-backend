@@ -4,6 +4,7 @@ public enum ErrorCode {
     BAD_REQUEST,
     VALIDATION_ERROR,
     TYPE_MISMATCH,
+    INVALID_ENUM,
     NOT_FOUND,
     CONFLICT,
     UNAUTHORIZED,

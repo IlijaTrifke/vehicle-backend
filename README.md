@@ -53,7 +53,7 @@ The application follows a layered design ensuring separation of concerns and tes
 | Method | Endpoint | Description |
 |--------|-----------|-------------|
 | **GET** | `/api/vehicles` | Retrieve all vehicles |
-| **GET** | `/api/vehicles/paged` | Retrieve paginated vehicles (supports `page`, `size`, `sort` query parameters) |
+| **GET** | `/api/vehicles/paged` | Retrieve paginated vehicles (supports `page`, `size`, `sort` query parameters and optional filters: `firstRegistrationYear` (exact year or range format `YYYY-YYYY`), `fuel`, `modelSearch`) |
 | **GET** | `/api/vehicles/{id}` | Retrieve a vehicle by ID |
 | **POST** | `/api/vehicles` | Create a new vehicle |
 | **POST** | `/api/vehicles/seed` | Generate and save 10 random vehicles with valid data |
@@ -175,6 +175,41 @@ curl -X GET "http://localhost:8080/api/vehicles/paged?page=0&size=10&sort=model,
 - `page` - Page number (0-indexed, default: 0)
 - `size` - Number of items per page (default: 20)
 - `sort` - Sort criteria (format: `field,direction`, e.g., `sort=model,asc` or `sort=model,desc`)
+
+**Optional Filters:**
+- `firstRegistrationYear` - Filter by first registration year
+  - **Exact year**: Single year value (e.g., `2020`)
+  - **Range format**: Year range in format `YYYY-YYYY` (e.g., `2000-2024`)
+    - Range is inclusive on both sides (>= startYear AND <= endYear)
+    - Both years must be valid 4-digit numbers
+    - If start and end year are the same (e.g., `2025-2025`), it is treated as an exact year filter
+    - Invalid formats (e.g., `abc-def`, `-2021`, `2020-`) are ignored (no filter applied)
+- `fuel` - Filter by fuel type (`diesel`, `petrol`, or `hybrid`)
+- `modelSearch` - Search by model name (case-insensitive partial match)
+
+**Filter Examples:**
+```bash
+# Filter by exact year
+curl -X GET "http://localhost:8080/api/vehicles/paged?firstRegistrationYear=2020"
+
+# Filter by year range (inclusive)
+curl -X GET "http://localhost:8080/api/vehicles/paged?firstRegistrationYear=2000-2024"
+
+# Range with same start and end year (treated as exact year)
+curl -X GET "http://localhost:8080/api/vehicles/paged?firstRegistrationYear=2025-2025"
+
+# Filter by fuel type
+curl -X GET "http://localhost:8080/api/vehicles/paged?fuel=diesel"
+
+# Filter by model search (partial match)
+curl -X GET "http://localhost:8080/api/vehicles/paged?modelSearch=audi"
+
+# Combine multiple filters
+curl -X GET "http://localhost:8080/api/vehicles/paged?firstRegistrationYear=2020-2021&fuel=diesel&modelSearch=audi"
+
+# Combine filters with pagination and sorting
+curl -X GET "http://localhost:8080/api/vehicles/paged?firstRegistrationYear=2020-2022&fuel=petrol&page=0&size=10&sort=model,asc"
+```
 
 **Response Format:**
 The paginated response includes:
