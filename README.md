@@ -94,7 +94,7 @@ Although not required by the specification, several improvements were added for 
 - **CORS configuration** for frontend integration  
 - **RFC 7807 Problem Details** standardized error format with `traceId` and stable `code`
 
-Note (validation UX): The DTO uses Long type for numeric fields (`cubicCapacity`, `mileage`) so that even extremely large values pass JSON parsing and then return precise Bean Validation messages (e.g., "must be less than or equal to ...") umesto generičnog "Malformed JSON or invalid types".
+Note (validation UX): The DTO uses Long type for numeric fields (`cubicCapacity`, `mileage`) so that even extremely large values pass JSON parsing and then return precise Bean Validation messages (e.g., "must be less than or equal to ...") instead of a generic "Malformed JSON or invalid types".
 
 ---
 
