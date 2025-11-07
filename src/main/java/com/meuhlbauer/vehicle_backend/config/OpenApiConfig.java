@@ -21,6 +21,7 @@ public class OpenApiConfig {
         ApiResponse notFoundResponse = createNotFoundResponse(problemDetailSchema);
         ApiResponse typeMismatchResponse = createTypeMismatchResponse(problemDetailSchema);
         ApiResponse validationErrorResponse = createValidationErrorResponse(problemDetailSchema);
+        ApiResponse invalidEnumResponse = createInvalidEnumResponse(problemDetailSchema);
 
         return new OpenAPI()
                 .info(new Info()
@@ -53,6 +54,7 @@ public class OpenApiConfig {
                                         | `BAD_REQUEST` | Malformed request or invalid format | 400 |
                                         | `VALIDATION_ERROR` | Validation failed (body/query/path parameters) | 400 |
                                         | `TYPE_MISMATCH` | Invalid parameter type (e.g., string instead of number) | 400 |
+                                        | `INVALID_ENUM` | Invalid enum value (e.g., invalid fuel type) | 400 |
                                         | `NOT_FOUND` | Resource not found | 404 |
                                         | `CONFLICT` | Resource conflict (e.g., duplicate) | 409 |
                                         | `UNAUTHORIZED` | Authentication required | 401 |
@@ -85,7 +87,8 @@ public class OpenApiConfig {
                         .addResponses("InternalErrorProblem", internalErrorResponse)
                         .addResponses("NotFoundProblem", notFoundResponse)
                         .addResponses("TypeMismatchProblem", typeMismatchResponse)
-                        .addResponses("ValidationErrorProblem", validationErrorResponse));
+                        .addResponses("ValidationErrorProblem", validationErrorResponse)
+                        .addResponses("InvalidEnumProblem", invalidEnumResponse));
     }
 
     private Schema<?> createProblemDetailSchema() {
@@ -119,7 +122,8 @@ public class OpenApiConfig {
         codeSchema.setType("string");
         codeSchema.setDescription("Application-specific error code");
         codeSchema.setEnum(java.util.Arrays.asList("BAD_REQUEST", "VALIDATION_ERROR", "TYPE_MISMATCH",
-                "NOT_FOUND", "CONFLICT", "UNAUTHORIZED", "FORBIDDEN", "INTERNAL_ERROR"));
+                "INVALID_ENUM", "NOT_FOUND", "CONFLICT", "UNAUTHORIZED", "FORBIDDEN",
+                "INTERNAL_ERROR"));
         codeSchema.setExample("VALIDATION_ERROR");
         problemDetail.addProperty("code", codeSchema);
         problemDetail.addProperty("traceId", new Schema<>().type("string")
@@ -257,6 +261,29 @@ public class OpenApiConfig {
 
         ApiResponse response = new ApiResponse();
         response.setDescription("Bad Request - Validation errors");
+        response.setContent(new io.swagger.v3.oas.models.media.Content()
+                .addMediaType("application/problem+json", mediaType));
+
+        return response;
+    }
+
+    private ApiResponse createInvalidEnumResponse(Schema<?> problemDetailSchema) {
+        MediaType mediaType = new MediaType();
+        mediaType.setSchema(problemDetailSchema);
+        mediaType.setExample("""
+                {
+                  "type": "https://api.example.com/problems/invalid-enum",
+                  "title": "Bad Request",
+                  "status": 400,
+                  "detail": "Invalid enum value",
+                  "instance": "/api/vehicles/paged?fuel=electric",
+                  "traceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "code": "INVALID_ENUM"
+                }
+                """);
+
+        ApiResponse response = new ApiResponse();
+        response.setDescription("Bad Request - Invalid enum value (e.g., invalid fuel type)");
         response.setContent(new io.swagger.v3.oas.models.media.Content()
                 .addMediaType("application/problem+json", mediaType));
 

@@ -39,13 +39,17 @@ public class VehicleController {
     }
 
     @Operation(summary = "Get all vehicles (paginated)", description = "Retrieves a paginated list of vehicles. " +
-            "Supports query parameters: page (default: 0), size (default: 20), sort (e.g., sort=model,asc). " +
-            "Optional filters: firstRegistrationYear (exact year or range format: YYYY-YYYY, e.g., 2000-2024), fuel " +
+            "Supports query parameters: page (default: 0), size (default: 20), sort (e.g., sort=model,asc). "
+            +
+            "Optional filters: firstRegistrationYear (exact year or range format: YYYY-YYYY, e.g., 2000-2024), fuel "
+            +
             "(diesel/petrol/hybrid), modelSearch (partial match)")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved paginated list of vehicles")
+    @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidEnumProblem")
     @GetMapping("/paged")
     public ResponseEntity<Page<VehicleResponse>> getAllPaged(
-            @Parameter(description = "Filter by first registration year (exact year, e.g., 2020, or range format, e.g" +
+            @Parameter(description = "Filter by first registration year (exact year, e.g., 2020, or range format, e.g"
+                    +
                     "., 2000-2024)") @RequestParam(required = false) String firstRegistrationYear,
             @Parameter(description = "Filter by fuel type (diesel, petrol, or hybrid)") @RequestParam(required =
                     false) String fuel,
@@ -92,7 +96,8 @@ public class VehicleController {
         return ResponseEntity.status(201).body(vehicles);
     }
 
-    @Operation(summary = "Update a vehicle", description = "Updates an existing vehicle by its ID with the provided " +
+    @Operation(summary = "Update a vehicle", description = "Updates an existing vehicle by its ID with the provided "
+            +
             "data")
     @ApiResponse(responseCode = "200", description = "Vehicle successfully updated")
     @ApiResponse(responseCode = "400", ref = "#/components/responses/ValidationErrorProblem")
