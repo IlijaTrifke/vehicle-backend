@@ -53,7 +53,10 @@ The application follows a layered design ensuring separation of concerns and tes
 | Method | Endpoint | Description |
 |--------|-----------|-------------|
 | **GET** | `/api/vehicles` | Retrieve all vehicles |
+| **GET** | `/api/vehicles/paged` | Retrieve paginated vehicles (supports `page`, `size`, `sort` query parameters) |
+| **GET** | `/api/vehicles/{id}` | Retrieve a vehicle by ID |
 | **POST** | `/api/vehicles` | Create a new vehicle |
+| **POST** | `/api/vehicles/seed` | Generate and save 10 random vehicles with valid data |
 | **PUT** | `/api/vehicles/{id}` | Update a vehicle by ID |
 | **DELETE** | `/api/vehicles/{id}` | Delete a vehicle by ID |
 
@@ -131,10 +134,57 @@ curl -X POST http://localhost:8080/api/vehicles   -H "Content-Type: application/
   }'
 ```
 
+### Seed Vehicles
+```bash
+curl -X POST http://localhost:8080/api/vehicles/seed
+```
+
+This endpoint generates and saves 10 random vehicles with valid data. Each vehicle will have:
+- Random model from a predefined list (Audi A4, BMW 320, Mercedes C-Class, VW Golf, Toyota Corolla, Ford Focus, Opel Astra, Škoda Octavia, Peugeot 308, Renault Clio)
+- Random registration year between 2000 and 2024
+- Random cubic capacity between 1000 and 5000
+- Random fuel type (diesel, petrol, or hybrid)
+- Random mileage between 0 and 500000
+
 ### Get All Vehicles
 ```bash
 curl -X GET http://localhost:8080/api/vehicles
 ```
+
+### Get Vehicle by ID
+```bash
+curl -X GET http://localhost:8080/api/vehicles/1
+```
+
+### Get Vehicles (Paginated)
+```bash
+# Default pagination (page 0, size 20)
+curl -X GET http://localhost:8080/api/vehicles/paged
+
+# Custom page and size
+curl -X GET "http://localhost:8080/api/vehicles/paged?page=0&size=10"
+
+# With sorting (ascending by model)
+curl -X GET "http://localhost:8080/api/vehicles/paged?page=0&size=10&sort=model,asc"
+
+# With sorting (descending by model)
+curl -X GET "http://localhost:8080/api/vehicles/paged?page=0&size=10&sort=model,desc"
+```
+
+**Query Parameters:**
+- `page` - Page number (0-indexed, default: 0)
+- `size` - Number of items per page (default: 20)
+- `sort` - Sort criteria (format: `field,direction`, e.g., `sort=model,asc` or `sort=model,desc`)
+
+**Response Format:**
+The paginated response includes:
+- `content` - Array of vehicles
+- `totalElements` - Total number of vehicles
+- `totalPages` - Total number of pages
+- `number` - Current page number
+- `size` - Page size
+- `first` - Whether this is the first page
+- `last` - Whether this is the last page
 
 ### Update Vehicle
 ```bash

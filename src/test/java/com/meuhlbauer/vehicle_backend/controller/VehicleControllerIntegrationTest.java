@@ -44,6 +44,144 @@ class VehicleControllerIntegrationTest {
     }
 
     @Test
+    void testGetAllVehiclesPaged() throws Exception {
+        // Create multiple vehicles for pagination testing
+        for (int i = 1; i <= 25; i++) {
+            VehicleRequest request = new VehicleRequest(
+                    "Model " + i,
+                    "202" + (i % 10),
+                    1000L + i,
+                    i % 3 == 0 ? Fuel.DIESEL : (i % 3 == 1 ? Fuel.PETROL : Fuel.HYBRID),
+                    10000L * i);
+            String requestJson = objectMapper.writeValueAsString(request);
+            mockMvc.perform(post("/api/vehicles")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestJson))
+                    .andExpect(status().isCreated());
+        }
+
+        // Test default pagination (page 0, size 20)
+        mockMvc.perform(get("/api/vehicles/paged"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(20))
+                .andExpect(jsonPath("$.totalElements").value(25))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").value(false));
+
+        // Test second page
+        mockMvc.perform(get("/api/vehicles/paged?page=1&size=20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(5))
+                .andExpect(jsonPath("$.totalElements").value(25))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.number").value(1))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.first").value(false))
+                .andExpect(jsonPath("$.last").value(true));
+
+        // Test custom page size
+        mockMvc.perform(get("/api/vehicles/paged?page=0&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(10))
+                .andExpect(jsonPath("$.totalElements").value(25))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(10));
+
+        // Test sorting by model ascending
+        mockMvc.perform(get("/api/vehicles/paged?page=0&size=5&sort=model,asc"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(5))
+                .andExpect(jsonPath("$.content[0].model").value("Model 1"))
+                .andExpect(jsonPath("$.content[1].model").value("Model 10"))
+                .andExpect(jsonPath("$.content[2].model").value("Model 11"));
+
+        // Test sorting by model descending
+        mockMvc.perform(get("/api/vehicles/paged?page=0&size=5&sort=model,desc"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(5))
+                .andExpect(jsonPath("$.content[0].model").value("Model 9"))
+                .andExpect(jsonPath("$.content[1].model").value("Model 8"))
+                .andExpect(jsonPath("$.content[2].model").value("Model 7"));
+    }
+
+    @Test
+    void testGetVehicleById() throws Exception {
+        // First create a vehicle
+        VehicleRequest request = new VehicleRequest(
+                "Audi A4",
+                "2020",
+                2000L,
+                Fuel.DIESEL,
+                120000L);
+
+        String requestJson = objectMapper.writeValueAsString(request);
+
+        String createResponse = mockMvc.perform(post("/api/vehicles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        VehicleResponse created = objectMapper.readValue(createResponse, VehicleResponse.class);
+        Long vehicleId = created.id();
+
+        // Test successful retrieval by ID
+        mockMvc.perform(get("/api/vehicles/{id}", vehicleId))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(vehicleId))
+                .andExpect(jsonPath("$.model").value("Audi A4"))
+                .andExpect(jsonPath("$.firstRegistrationYear").value("2020"))
+                .andExpect(jsonPath("$.cubicCapacity").value(2000))
+                .andExpect(jsonPath("$.fuel").value("diesel"))
+                .andExpect(jsonPath("$.mileage").value(120000));
+
+        // Test retrieval of non-existent vehicle (404)
+        mockMvc.perform(get("/api/vehicles/{id}", 999L))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.type").exists())
+                .andExpect(jsonPath("$.title").value("Not Found"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").exists())
+                .andExpect(jsonPath("$.instance").value("/api/vehicles/999"))
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.resource").value("vehicle"))
+                .andExpect(jsonPath("$.resourceId").value("999"))
+                .andExpect(jsonPath("$.traceId").exists());
+
+        // Test retrieval with invalid type (string instead of Long)
+        mockMvc.perform(get("/api/vehicles/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.type").exists())
+                .andExpect(jsonPath("$.title").value("Bad Request"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detail").value("Invalid parameter type"))
+                .andExpect(jsonPath("$.instance").value("/api/vehicles/abc"))
+                .andExpect(jsonPath("$.code").value("TYPE_MISMATCH"))
+                .andExpect(jsonPath("$.traceId").exists())
+                .andExpect(jsonPath("$.errors").exists())
+                .andExpect(jsonPath("$.errors.id").exists());
+    }
+
+    @Test
     void testCreateVehicle() throws Exception {
         // Test POST /api/vehicles with valid data
         VehicleRequest request = new VehicleRequest(
@@ -304,5 +442,27 @@ class VehicleControllerIntegrationTest {
                 .andExpect(jsonPath("$.traceId").exists())
                 .andExpect(jsonPath("$.errors").exists())
                 .andExpect(jsonPath("$.errors.id").exists());
+    }
+
+    @Test
+    void testSeedVehicles() throws Exception {
+        // Test POST /api/vehicles/seed - should create 10 random vehicles
+        long initialCount = vehicleRepository.count();
+
+        mockMvc.perform(post("/api/vehicles/seed"))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(10))
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].model").exists())
+                .andExpect(jsonPath("$[0].firstRegistrationYear").exists())
+                .andExpect(jsonPath("$[0].cubicCapacity").exists())
+                .andExpect(jsonPath("$[0].fuel").exists())
+                .andExpect(jsonPath("$[0].mileage").exists())
+                .andExpect(jsonPath("$[9].id").exists());
+
+        // Verify that vehicles are saved in database
+        assertThat(vehicleRepository.count()).isEqualTo(initialCount + 10);
     }
 }
