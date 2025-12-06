@@ -1,6 +1,5 @@
 # 🚗 Vehicle Backend
 
-A **Spring Boot** application developed as part of the Mühlbauer technical assignment.  
 The project implements **Create, Read, Update, and Delete (CRUD)** functionality for managing vehicle records, following a clean, modular architecture and good development practices.
 
 ---
@@ -331,5 +330,3 @@ All tests run against the H2 in-memory database.
 - Some additional improvements were made for code quality and developer experience.
 
 ---
-
-© 2025 — Developed by **Ilija Trifunović** as part of the Mühlbauer interview assignment.
